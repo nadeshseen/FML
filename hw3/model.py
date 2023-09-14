@@ -2,14 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import pickle as pkl
-
+from fun import Gaussian, Bernoulli, Multinomial, Exponential, Laplace
 
 class NaiveBayes:
+
     def fit(self, X, y):
 
         """Start of your code."""
         """
-        X : np.array of shape (n,10)
+        X : np.array of shape (n,2)
         y : np.array of shape (n,)
         Create a variable to store number of unique classes in the dataset.
         Assume Prior for each class to be ratio of number of data points in that class to total number of data points.
@@ -18,12 +19,45 @@ class NaiveBayes:
         You can create a separate function for fitting each distribution in its and call it here.
         """
 
+        self.classes = np.unique(y)
+        classes = np.unique(y)
+        self.n_classes = classes.shape[0]
+        P = []
+        for i in range(self.n_classes):
+            outcome = classes[i]
+            outcome_count = sum(y == outcome)
+            P.append( outcome_count/len(y))
+        self.prioris = P
 
+        # 1. (X1, X2) are drawn independently from two different univariate Gaussian distributions.
+        self.x1 = Gaussian()
+        self.x1.fit(X[:,0], y)
+        self.x2 = Gaussian()
+        self.x2.fit(X[:,1], y)
 
+        # 2. (X3, X4) are random variables drawn independently from two different Bernoulli Distributions
+        self.x3 = Bernoulli()
+        self.x3.fit(X[:,2], y)
+        self.x4 = Bernoulli()
+        self.x4.fit(X[:,3], y)
 
+        # 3. (X5, X6) are random variables drawn independently from two different Laplace Distributions
+        self.x5 = Laplace()
+        self.x5.fit(X[:,4], y)
+        self.x6 = Laplace()
+        self.x6.fit(X[:,5], y)
 
+        # 4. (X7, X8) are random variables drawn independently from two different Exponential Distribution
+        self.x7 = Exponential()
+        self.x7.fit(X[:,6], y)
+        self.x8 = Exponential()
+        self.x8.fit(X[:,7], y)
 
-
+        # 5. (X9, X10) are random variables drawn independently from two different Multinomial Distribution
+        self.x9 = Multinomial()
+        self.x9.fit(X[:,8], y)
+        self.x10 = Multinomial()
+        self.x10.fit(X[:,9], y)
 
 
         """End of your code."""
@@ -31,7 +65,7 @@ class NaiveBayes:
     def predict(self, X):
         """Start of your code."""
         """
-        X : np.array of shape (n,10)
+        X : np.array of shape (n,2)
 
         Calculate the posterior probability using the parameters of the distribution calculated in fit function.
         Take care of underflow errors suitably (Hint: Take log of probabilities)
@@ -39,14 +73,42 @@ class NaiveBayes:
         It is implied that prediction[i] is the class that maximizes posterior probability for ith data point in X.
         You can create a separate function for calculating posterior probability and call it here.
         """
+        predicted = []
+        for i in range(X.shape[0]):
+            ll = self.logLikelihood(self.x1.pdf(X[i, 0]))
+            ll = sum(ll, self.logLikelihood(self.x2.pdf(X[i, 1])))
+            #ll = self.logLikelihood(self.x2.pdf(X[i, 2]))
+            ll = sum(ll, self.logLikelihood(self.x3.pdf(X[i, 2])))
+            ll = sum(ll, self.logLikelihood(self.x4.pdf(X[i, 3])))
+            ll = sum(ll, self.logLikelihood(self.x5.pdf(X[i, 4])))
+            ll = sum(ll, self.logLikelihood(self.x6.pdf(X[i, 5])))
+            ll = sum(ll, self.logLikelihood(self.x7.pdf(X[i, 6])))
+            ll = sum(ll, self.logLikelihood(self.x8.pdf(X[i, 7])))
+            ll = sum(ll, self.logLikelihood(self.x9.pdf(X[i, 8])))
+            ll = sum(ll, self.logLikelihood(self.x10.pdf(X[i,9])))
+            #ll = sum(ll, -1*self.prioris)
 
+            indices = np.argmax(ll)
+            predicted.append(self.classes[indices])
 
-
-
-
-
-
+        return np.array(predicted)
         """End of your code."""
+
+    def logLikelihood(self, pdfs):
+        ll = []
+        for i in range(self.n_classes):
+            likelihood = pdfs[i] * self.prioris[i]
+            ll.append(likelihood)
+        
+        marginal = np.sum(ll)
+        loglike = []
+        for i in range(self.n_classes):
+            likelihood = ll[i] * self.prioris[i] / marginal
+            if likelihood >= 0:
+                loglike.append(np.log(likelihood))
+            else:
+                loglike.append(0.0)
+        return loglike
 
     def getParams(self):
         """
@@ -60,12 +122,35 @@ class NaiveBayes:
         exponential = {"0":[lambda_x7,lambda_x8],"1":[lambda_x7,lambda_x8],"2":[lambda_x7,lambda_x8]}
         multinomial = {"0":[[p0_x9,...,p4_x9],[p0_x10,...,p7_x10]],"1":[[p0_x9,...,p4_x9],[p0_x10,...,p7_x10]],"2":[[p0_x9,...,p4_x9],[p0_x10,...,p7_x10]]}
         """
-        priors = {}
-        guassian = {}
-        bernoulli = {}
-        laplace = {}
-        exponential = {}
-        multinomial = {}
+        #print(self.prioris)
+        priors = dict(zip(range(len(self.prioris)),self.prioris))
+
+        mu, sigma = self.x1.getParams()
+        mu1, sigma1 = self.x2.getParams()
+        guassian = dict()
+        for i in mu:
+            guassian[i] = [mu[i], mu1[i], sigma[i], sigma1[i]]
+
+        p = self.x2.getParams()
+        p1= self.x4.getParams()
+        tmp = [ [i, j] for i, j in zip(p, p1)]
+        bernoulli = dict(zip(range(len(tmp)),tmp))
+
+        mu, sigma = self.x5.getParams()
+        mu1, sigma1 = self.x6.getParams()
+        laplace = dict()
+        for i in mu:
+            laplace[i] = [mu[i], mu1[i], sigma[i], sigma1[i]]
+
+        p = self.x7.getParams()
+        p1= self.x8.getParams()
+        tmp = [ [i, j] for i, j in zip(p, p1)]
+        exponential = dict(zip(range(len(tmp)),tmp))
+
+        p = self.x9.getParams()
+        p1= self.x10.getParams()
+        tmp = [ [i, j] for i, j in zip(p, p1)]
+        multinomial = dict(zip(range(len(tmp)),tmp))
 
         """Start your code"""
 
@@ -98,7 +183,7 @@ def load_model(filename="model.pkl"):
     file.close()
     return model
 
-def visualise(data_points,labels):
+def visualise(data_points,labels, name):
     """
     datapoints: np.array of shape (n,2)
     labels: np.array of shape (n,)
@@ -107,7 +192,7 @@ def visualise(data_points,labels):
     plt.figure(figsize=(8, 6))
     plt.scatter(data_points[:, 0], data_points[:, 1], c=labels, cmap='viridis')
     plt.colorbar()
-    plt.title('Generated 2D Data from 5 Gaussian Distributions')
+    plt.title('Generated 2D Data from 5 Maussian Distributions')
     plt.xlabel('Feature 1')
     plt.ylabel('Feature 2')
     plt.show()
@@ -137,13 +222,26 @@ def net_f1score(predictions, true_labels):
             float: The precision of the predictions.
         """
         """Start of your code."""
+        tp = 0
+        tn = 0
+        fp = 0
+        fn = 0
+        for pred, gt in zip(predictions, true_labels):
+            if gt == label and pred == label:
+               tp += 1
+            elif gt != label and pred != label:
+               tn += 1
+            elif gt != label and pred == label:
+               fp += 1
+            elif gt == label and pred != label:
+               fn += 1
         
 
+        print(tp, tn, fp, tn)
+        prec = tp/(tp + fp) if tp > 0 else 0
+        return prec
 
-
-        
         """End of your code."""
-        
 
 
     def recall(predictions, true_labels, label):
@@ -158,9 +256,23 @@ def net_f1score(predictions, true_labels):
         """
         """Start of your code."""
         
+        tp = 0
+        tn = 0
+        fp = 0
+        fn = 0
+        for pred, gt in zip(predictions, true_labels):
+            if gt == label and pred == label:
+               tp += 1
+            elif gt != label and pred != label:
+               tn += 1
+            elif gt != label and pred == label:
+               fp += 1
+            elif gt == label and pred != label:
+               fn += 1
+        
 
-
-
+        recall = tp/(tp + fn)
+        return recall
 
         """End of your code."""
         
@@ -177,10 +289,9 @@ def net_f1score(predictions, true_labels):
         """
 
         """Start of your code."""
-        
-
-
-
+        p = precision(predictions, true_labels, label)
+        r = recall(predictions, true_labels, label)
+        f1 = 2* p * r / (p + r) if p > 0 else 0
 
         """End of your code."""
         return f1
@@ -219,7 +330,7 @@ if __name__ == "__main__":
     validation_labels = validation_dataset[:, -1]
 
     # Visualize the data
-    # visualise(train_datapoints, train_labels, "train_data.png")
+    visualise(train_datapoints, train_labels, "train_data.png")
 
     # Train the model
     model = NaiveBayes()
@@ -243,9 +354,10 @@ if __name__ == "__main__":
     print('Training F1 Score: ', train_f1score)
     print('Validation F1 Score: ', validation_f1score)
 
+    print(model.getParams())
     # Save the model
     save_model(model)
 
     # Visualize the predictions
-    # visualise(validation_datapoints, validation_predictions, "validation_predictions.png")
+    visualise(validation_datapoints, validation_predictions, "validation_predictions.png")
 
