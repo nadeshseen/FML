@@ -22,8 +22,8 @@ class Gaussian:
         self.sigma = sigma
         self.classes = classes
         self.n_classes = n_classes
-        print(mu)
-        print(sigma)
+        # print(mu)
+        # print(sigma)
         return mu, sigma
 
     def getParams(self):
@@ -91,8 +91,8 @@ class Laplace:
         self.n_classes = n_classes
         self.mu = mu
         self.b = b
-        print(mu)
-        print(b)
+        # print(mu)
+        # print(b)
         return mu, b
 
     def getParams(self):

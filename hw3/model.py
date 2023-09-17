@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import pickle as pkl
+
 from fun import Gaussian, Bernoulli, Multinomial, Exponential, Laplace
 
 class NaiveBayes:
@@ -59,8 +60,33 @@ class NaiveBayes:
         self.x10 = Multinomial()
         self.x10.fit(X[:,9], y)
 
-
         """End of your code."""
+
+    def getLogLike(self, x):
+        ll = []
+        for i in x:
+            if (i > 0):
+               ll.append(np.log(i))
+            else:
+               ll.append(0.0)
+
+        return np.array(ll)
+
+    def posterior(self, X):
+        Py_given_x = self.getLogLike(self.prioris) + \
+                     self.getLogLike(self.x1.pdf(X[0])) + \
+                     self.getLogLike(self.x2.pdf(X[1])) + \
+                     self.getLogLike(self.x3.pdf(X[2])) + \
+                     self.getLogLike(self.x4.pdf(X[3])) + \
+                     self.getLogLike(self.x5.pdf(X[4])) + \
+                     self.getLogLike(self.x6.pdf(X[5])) + \
+                     self.getLogLike(self.x7.pdf(X[6])) + \
+                     self.getLogLike(self.x8.pdf(X[7])) + \
+                     self.getLogLike(self.x9.pdf(X[8])) + \
+                     self.getLogLike(self.x10.pdf(X[9])) 
+
+        #print("PY = ", Py_given_x)
+        return Py_given_x
 
     def predict(self, X):
         """Start of your code."""
@@ -75,40 +101,11 @@ class NaiveBayes:
         """
         predicted = []
         for i in range(X.shape[0]):
-            ll = self.logLikelihood(self.x1.pdf(X[i, 0]))
-            ll = sum(ll, self.logLikelihood(self.x2.pdf(X[i, 1])))
-            #ll = self.logLikelihood(self.x2.pdf(X[i, 2]))
-            ll = sum(ll, self.logLikelihood(self.x3.pdf(X[i, 2])))
-            ll = sum(ll, self.logLikelihood(self.x4.pdf(X[i, 3])))
-            ll = sum(ll, self.logLikelihood(self.x5.pdf(X[i, 4])))
-            ll = sum(ll, self.logLikelihood(self.x6.pdf(X[i, 5])))
-            ll = sum(ll, self.logLikelihood(self.x7.pdf(X[i, 6])))
-            ll = sum(ll, self.logLikelihood(self.x8.pdf(X[i, 7])))
-            ll = sum(ll, self.logLikelihood(self.x9.pdf(X[i, 8])))
-            ll = sum(ll, self.logLikelihood(self.x10.pdf(X[i,9])))
-            #ll = sum(ll, -1*self.prioris)
-
-            indices = np.argmax(ll)
+            indices = np.argmax(self.posterior(X[i]))
             predicted.append(self.classes[indices])
 
         return np.array(predicted)
         """End of your code."""
-
-    def logLikelihood(self, pdfs):
-        ll = []
-        for i in range(self.n_classes):
-            likelihood = pdfs[i] * self.prioris[i]
-            ll.append(likelihood)
-        
-        marginal = np.sum(ll)
-        loglike = []
-        for i in range(self.n_classes):
-            likelihood = ll[i] * self.prioris[i] / marginal
-            if likelihood >= 0:
-                loglike.append(np.log(likelihood))
-            else:
-                loglike.append(0.0)
-        return loglike
 
     def getParams(self):
         """
@@ -122,6 +119,9 @@ class NaiveBayes:
         exponential = {"0":[lambda_x7,lambda_x8],"1":[lambda_x7,lambda_x8],"2":[lambda_x7,lambda_x8]}
         multinomial = {"0":[[p0_x9,...,p4_x9],[p0_x10,...,p7_x10]],"1":[[p0_x9,...,p4_x9],[p0_x10,...,p7_x10]],"2":[[p0_x9,...,p4_x9],[p0_x10,...,p7_x10]]}
         """
+
+        """Start your code"""
+
         #print(self.prioris)
         priors = dict(zip(range(len(self.prioris)),self.prioris))
 
@@ -131,7 +131,7 @@ class NaiveBayes:
         for i in mu:
             guassian[i] = [mu[i], mu1[i], sigma[i], sigma1[i]]
 
-        p = self.x2.getParams()
+        p = self.x3.getParams()
         p1= self.x4.getParams()
         tmp = [ [i, j] for i, j in zip(p, p1)]
         bernoulli = dict(zip(range(len(tmp)),tmp))
@@ -151,11 +151,6 @@ class NaiveBayes:
         p1= self.x10.getParams()
         tmp = [ [i, j] for i, j in zip(p, p1)]
         multinomial = dict(zip(range(len(tmp)),tmp))
-
-        """Start your code"""
-
-
-
 
         
         """End your code"""
@@ -237,7 +232,7 @@ def net_f1score(predictions, true_labels):
                fn += 1
         
 
-        print(tp, tn, fp, tn)
+        #print(tp, tn, fp, tn)
         prec = tp/(tp + fp) if tp > 0 else 0
         return prec
 
@@ -354,10 +349,9 @@ if __name__ == "__main__":
     print('Training F1 Score: ', train_f1score)
     print('Validation F1 Score: ', validation_f1score)
 
-    print(model.getParams())
+    #print(model.getParams())
     # Save the model
     save_model(model)
 
     # Visualize the predictions
     visualise(validation_datapoints, validation_predictions, "validation_predictions.png")
-
